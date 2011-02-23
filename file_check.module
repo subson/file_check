@@ -1,0 +1,150 @@
+<?php   
+// $Id: file_check.module,v 1.5 2009/07/21 16:28:29 Subson Mittal Exp $
+/**
+ * @file
+ * Checks for files listed in the files table, if they actually exists.
+ */
+ 
+/**
+ * Implementation of hook_help().
+ */
+function file_check_help($section) {
+  switch ($section) {
+    case 'admin/modules#description':
+      return t('Enables the file check for files table.');
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function file_check_perm() {
+  return array('access file_check');
+}
+
+
+/**
+ * Implementation of hook_access().
+ */
+function file_check_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    return user_access('access file_check');
+  }
+
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function file_check_menu() {
+    $nid = (int)arg(1);
+    global $user;     
+    $items['file_check/list'] = array(            
+      'page callback' => 'file_check_list',
+      'access arguments'   => array('access file_check'),
+      'title'    => t('List Files'),                     
+      'type'     => MENU_CALLBACK
+    );
+    
+    return $items;
+}
+     
+
+function file_check_list() { 
+   return theme('file_check_list');
+}
+
+function _file_check_load_data() {
+	// load the data into file_check table  
+  $output = '';
+  $sql = 'SELECT f.fid, f.uid, f.filename, f.filepath, f.filesize, f.status, f.timestamp FROM {files} f';
+  //dsm($sql);
+  $result = db_query($sql);
+  if (!$result) {
+    $output = "No files available.";
+  };
+
+  while ($fnode = db_fetch_object($result)) {
+  	$data = '';
+    $status = 0;
+    $data['fid'] = $fnode->fid;
+    $data['uid'] = $fnode->uid;
+    $data['filename'] = $fnode->filename;
+    $data['filepath'] = $fnode->filepath;
+    if (file_exists($fnode->filepath)){
+    	$status = 1;
+    }
+    else {
+    	$status = 0;
+    }
+    $data['status'] = $fnode->status;
+    $data['timestamp'] = $fnode->timestamp;
+    $timestamp = time();
+    db_query('INSERT INTO {file_check} (fcid, data, status, timestamp) VALUES (%d, \'%s\', %d, %d)', $fnode->fid, serialize($data), $status, $timestamp);
+  }
+	
+	return $output;
+}
+
+function theme_file_check_list() {
+  //static $refresh_list;
+  $output = '';
+  //if (!$refresh_list) {
+  	//dsm("here");
+  	//$output = _file_check_load_data();
+  //}
+  //else {
+    //echo "here";
+    //$refresh_list = TRUE;	 
+	  $headers = array(
+	    array('data' => t('File Id'), 'field' => 'fc.fcid'),
+	    array('data' => t('Data'), 'field' => 'filedata'),
+	    array('data' => t('Status'), 'field' => 'fc.status', 'sort' => 'desc'),
+	    array('data' => t('timestamp'), 'field' => 'fc.timestamp'),
+	  );
+	  
+	  $sql = 'SELECT fc.fcid, fc.data filedata, fc.status, fc.timestamp FROM {file_check} fc'. tablesort_sql($headers);
+	  dsm($sql);
+	  $result = pager_query($sql, 30);
+	  if (!$result) {
+	    $output = "No files available.";
+	  };
+	  
+	  while ($fnode = db_fetch_object($result)) {
+	  	//dsm($fnode);
+	    $data[$fnode->fcid]['fcid'] = $fnode->fcid;
+	    $filedata = unserialize($fnode->filedata);
+	    //dsm($filedata);
+	    $data[$fnode->fcid]['filedata'] = $filedata['filename'] ;
+	    $data[$fnode->fcid]['status'] = $fnode->status;
+	    $data[$fnode->fcid]['timestamp'] = $fnode->timestamp;
+	  }
+	  //dsm($data);
+	  //add table to output
+	  $output .= theme('table', $headers, $data);
+	  //dsm($output);
+	  //exit;
+	  //add pager to output
+	  $pager = theme('pager', NULL, 30, 0);
+	  if (!empty($pager)) {
+	    $output .= $pager;
+	  }
+	
+	  return $output;
+  //}
+}
+
+/**
+* @desc specify themes used
+* implementation of hook_theme
+*/
+function file_check_theme() {
+  $themes= array(
+    'file_check_list' => array(
+      'arguments' => array()
+    ),
+  );
+  return $themes;
+}

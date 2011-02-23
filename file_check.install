@@ -1,0 +1,71 @@
+<?php
+// $Id: file_check.install $
+/**
+* @file Module for file_check dashboard functionality
+*/                                                                        
+/**
+* @desc hook_install
+*/
+function file_check_install() {       
+    $result = drupal_install_schema('file_check');
+    if (count($result) > 0) {
+        drupal_set_message(t('file_check module successfully installed.'));
+    }
+    else {
+        drupal_set_message(t('There was a problem in installation of file_check module.'));
+    }
+}
+/**
+* @desc hook_uninstall
+* Delete all variables associated with the module
+*/
+
+function file_check_uninstall() {
+  drupal_uninstall_schema('file_check');          
+  cache_clear_all('variables', 'cache');
+  drupal_set_message(t('file_check module sucessfully uninstalled.'));                       
+
+}
+/**
+*@desc we  will answers settings of each user in this custom table if required. Otherwise we can answers these settings with $user object for global and default config.
+*/
+function file_check_schema() {
+   $schema=array();
+   $schema['file_check'] = array(
+    'description' => 'Stores information about file_check status.', 
+    'fields' => array(
+      'fcid' => array(
+        'description' => 'Primary Key: Unique files ID.', 
+        'type' => 'serial', 
+        'unsigned' => TRUE, 
+        'not null' => TRUE,
+      ), 
+      'data' => array(
+        'description' => 'A collection of file data to store.', 
+        'type' => 'blob', 
+        'not null' => FALSE, 
+        'size' => 'big',
+      ), 
+      'status' => array(
+        'description' => 'A flag indicating whether file physically exists(1) or not(0).', 
+        'type' => 'int', 
+        'not null' => TRUE, 
+        'default' => 0,
+      ), 
+      'timestamp' => array(
+        'description' => 'UNIX timestamp for when the last file_check was done.', 
+        'type' => 'int', 
+        'unsigned' => TRUE, 
+        'not null' => TRUE, 
+        'default' => 0,
+      ),
+    ), 
+    'indexes' => array(
+      'status' => array('status'), 
+      'timestamp' => array('timestamp'),
+    ), 
+    'primary key' => array('fcid'),
+  );
+             
+  return $schema;
+}

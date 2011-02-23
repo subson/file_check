@@ -1,0 +1,6 @@
+; $Id: file_check.info,v 1.0 $
+name = file check
+description = Allows users to check the files table to see if the physical files exists.
+package = drupal utility
+version = 6.x
+core = 6.x
