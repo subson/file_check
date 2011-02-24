@@ -41,6 +41,12 @@ function file_check_access($op, $node) {
 function file_check_menu() {
     $nid = (int)arg(1);
     global $user;     
+    $items['file_check/status'] = array(            
+      'page callback' => 'file_check_status',
+      'access arguments'   => array('access file_check'),
+      'title'    => t('Files Status'),                     
+      'type'     => MENU_CALLBACK
+    );
     $items['file_check/list'] = array(            
       'page callback' => 'file_check_list',
       'access arguments'   => array('access file_check'),
@@ -50,7 +56,102 @@ function file_check_menu() {
     
     return $items;
 }
-     
+
+/**
+ * 
+ */
+function file_check_requirements() {
+	$requirements = array();
+		
+  $requirements['files'] = array(
+    'value' => _files_get_count(),
+  );
+  $requirements['files']['severity'] = REQUIREMENT_INFO;
+  $requirements['files']['title'] = t('Total files in files table');
+
+  $requirements['file_check'] = array(
+    'value' => _file_check_get_count(),
+  );
+  $requirements['file_check']['severity'] = REQUIREMENT_INFO;
+  $requirements['file_check']['title'] = t('Matching files in asset folder');
+
+  return $requirements;
+}
+
+  
+/*
+ * Total count of files in files table and the physical count of files.
+ */     
+
+function file_check_status() {
+	$filecount = 0;
+	$directory = "./sites/admin/files/";
+	if (glob("$directory*", GLOB_ONLYDIR) != false)
+	{
+	 $filecount = count(glob("$directory*", GLOB_ONLYDIR));
+	}
+	echo  $filecount;
+	$requirements = file_check_requirements();
+	//dsm($requirements);
+  
+  $i = 0;
+  $output = '<table class="system-status-report">';
+  foreach ($requirements as $requirement) {
+    if (empty($requirement['#type'])) {
+      $class = ++$i % 2 == 0 ? 'even' : 'odd';
+
+      $classes = array(
+        REQUIREMENT_INFO => 'info', 
+        REQUIREMENT_OK => 'ok', 
+        REQUIREMENT_WARNING => 'warning', 
+        REQUIREMENT_ERROR => 'error',
+      );
+      $class = $classes[isset($requirement['severity']) ? (int) $requirement['severity'] : 0] . ' ' . $class;
+
+      // Output table row(s)
+      if (!empty($requirement['description'])) {
+        $output .= '<tr class="' . $class . ' merge-down"><th>' . $requirement['title'] . '</th><td>' . $requirement['value'] . '</td></tr>';
+        $output .= '<tr class="' . $class . ' merge-up"><td colspan="2">' . $requirement['description'] . '</td></tr>';
+      }
+      else {
+        $output .= '<tr class="' . $class . '"><th>' . $requirement['title'] . '</th><td>' . $requirement['value'] . '</td></tr>';
+      }
+    }
+  }
+
+  $output .= '</table>';
+  
+  $form = drupal_get_form('file_check_form');
+  $output .= $form;
+  return $output;
+}
+
+/*
+ * Implementation of hook_form().
+ */
+function file_check_form() {
+	$form['submit'] = array(
+  	'#type' => 'submit',
+  	'#value' => t('Check file status'),
+	);
+	
+	return $form;
+}
+
+function file_check_form_submit() {
+	_file_check_load_data();
+	drupal_set_message(t('File check table is rebuilt.'));
+}
+
+function _files_get_count() {
+	$files_count = db_result(db_query('SELECT count(*) as cnt FROM {files}'));
+	return $files_count;
+}
+
+function _file_check_get_count() {
+	$file_count = db_result(db_query('SELECT count(*) as cnt FROM {file_check} WHERE status = %d', 1));
+	return $file_count;
+}
 
 function file_check_list() { 
    return theme('file_check_list');
@@ -106,7 +207,7 @@ function theme_file_check_list() {
 	  );
 	  
 	  $sql = 'SELECT fc.fcid, fc.data filedata, fc.status, fc.timestamp FROM {file_check} fc'. tablesort_sql($headers);
-	  dsm($sql);
+	  //dsm($sql);
 	  $result = pager_query($sql, 30);
 	  if (!$result) {
 	    $output = "No files available.";
