@@ -45,13 +45,13 @@ function file_check_menu() {
       'page callback' => 'file_check_status',
       'access arguments'   => array('access file_check'),
       'title'    => t('Files Status'),                     
-      'type'     => MENU_CALLBACK
+      'type' => MENU_NORMAL_ITEM,
     );
     $items['file_check/list'] = array(            
       'page callback' => 'file_check_list',
       'access arguments'   => array('access file_check'),
-      'title'    => t('List Files'),                     
-      'type'     => MENU_CALLBACK
+      'title'    => t('Files list'),                     
+      'type' => MENU_LOCAL_TASK,
     );
     
     return $items;
@@ -61,9 +61,11 @@ function file_check_menu() {
  * 
  */
 function file_check_requirements() {
+	global $conf;
 	$requirements = array();
-		
-  $requirements['files'] = array(
+	$files = _file_check_file_counter($conf['file_directory_path'].'/');
+	
+	$requirements['files'] = array(
     'value' => _files_get_count(),
   );
   $requirements['files']['severity'] = REQUIREMENT_INFO;
@@ -74,6 +76,12 @@ function file_check_requirements() {
   );
   $requirements['file_check']['severity'] = REQUIREMENT_INFO;
   $requirements['file_check']['title'] = t('Matching files in asset folder');
+  
+  $requirements['asset_files'] = array(
+    'value' => count($files),
+  );
+  $requirements['asset_files']['severity'] = REQUIREMENT_INFO;
+  $requirements['asset_files']['title'] = t('Count of files in asset folder');
 
   return $requirements;
 }
@@ -84,13 +92,7 @@ function file_check_requirements() {
  */     
 
 function file_check_status() {
-	$filecount = 0;
-	$directory = "./sites/admin/files/";
-	if (glob("$directory*", GLOB_ONLYDIR) != false)
-	{
-	 $filecount = count(glob("$directory*", GLOB_ONLYDIR));
-	}
-	echo  $filecount;
+	
 	$requirements = file_check_requirements();
 	//dsm($requirements);
   
@@ -124,6 +126,47 @@ function file_check_status() {
   $form = drupal_get_form('file_check_form');
   $output .= $form;
   return $output;
+}
+
+function dir_list($d) { 
+	foreach(array_diff(scandir($d),array('.','..')) as $f) {
+    if(is_dir($d.'/'.$f)) {
+    	$l[]=$f; 
+    }
+	}  
+  return $l; 
+} 
+
+function _file_check_file_counter($d=".", $x="") {
+	//$dir_list = dir_list($d);
+	//print_r($dir_list);
+	foreach(array_diff(scandir($d),array('.','..')) as $f) {
+		if(is_file($d.'/'.$f)&&(($x)?ereg($x.'$',$f):1)) {
+      $l[]=$f;
+	  } 
+	}  
+  dsm($l);
+  return $l; 
+} 
+
+function _file___check_file_counter_old($dir){
+  $counter = 0;
+  if ($handle = opendir($dir)) {
+    //echo "Directory handle: $handle\n";
+    //echo "Files:\n";
+    /* This is the correct way to loop over the directory. */
+    while (false !== ($file = readdir($handle))) {
+      echo "<BR>".$counter.  filetype($file). " - $file";
+      if(filetype($file)) {
+        $counter++;	
+      }
+      
+    }
+    closedir($handle);
+  }
+  $counter -= 1; // in order to exclude '.' and '..', as well as start the counter on 1
+  
+  return $counter;
 }
 
 /*
