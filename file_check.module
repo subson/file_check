@@ -153,26 +153,6 @@ function _file_check_file_counter($d=".", $x="") {
   return $l; 
 } 
 
-function _file___check_file_counter_old($dir){
-  $counter = 0;
-  if ($handle = opendir($dir)) {
-    //echo "Directory handle: $handle\n";
-    //echo "Files:\n";
-    /* This is the correct way to loop over the directory. */
-    while (false !== ($file = readdir($handle))) {
-      echo "<BR>".$counter.  filetype($file). " - $file";
-      if(filetype($file)) {
-        $counter++;	
-      }
-      
-    }
-    closedir($handle);
-  }
-  $counter -= 1; // in order to exclude '.' and '..', as well as start the counter on 1
-  
-  return $counter;
-}
-
 /*
  * Implementation of hook_form().
  */
