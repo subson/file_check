@@ -39,22 +39,26 @@ function file_check_access($op, $node) {
  * Implementation of hook_menu().
  */
 function file_check_menu() {
-    $nid = (int)arg(1);
-    global $user;     
-    $items['file_check/status'] = array(            
-      'page callback' => 'file_check_status',
-      'access arguments'   => array('access file_check'),
-      'title'    => t('Files Status'),                     
-      'type' => MENU_NORMAL_ITEM,
-    );
-    $items['file_check/list'] = array(            
-      'page callback' => 'file_check_list',
-      'access arguments'   => array('access file_check'),
-      'title'    => t('Files list'),                     
-      'type' => MENU_LOCAL_TASK,
-    );
+  $items['admin/reports/file_check'] = array(
+    'title' => 'File check', 
+    'description' => "Check the files table for any missing files.", 
+    'page callback' => 'file_check_status',
+    'access arguments' => array('access file_check'), 
+  );
+  $items['admin/reports/file_check/status'] = array(            
+    'title'    => t('Files Status'),                     
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
     
-    return $items;
+  );
+  $items['admin/reports/file_check/list'] = array(            
+    'title'    => t('List'),                     
+    'page callback' => 'file_check_list',
+    'access arguments' => array('access file_check'),
+    'type' => MENU_LOCAL_TASK,
+  );
+    
+  return $items;
 }
 
 /**
@@ -145,7 +149,7 @@ function _file_check_file_counter($d=".", $x="") {
       $l[]=$f;
 	  } 
 	}  
-  dsm($l);
+  //dsm($l);
   return $l; 
 } 
 
