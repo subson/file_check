@@ -65,11 +65,11 @@ function file_check_menu() {
  * 
  */
 function file_check_requirements() {
-	global $conf;
-	$requirements = array();
-	$files = _file_check_file_counter($conf['file_directory_path'].'/');
-	
-	$requirements['files'] = array(
+  global $conf;
+  $requirements = array();
+  $files = _file_check_file_counter($conf['file_directory_path'] . '/');
+
+  $requirements['files'] = array(
     'value' => _files_get_count(),
   );
   $requirements['files']['severity'] = REQUIREMENT_INFO;
@@ -96,11 +96,8 @@ function file_check_requirements() {
  */     
 
 function file_check_status() {
-	
-	$requirements = file_check_requirements();
-	//dsm($requirements);
-  
   $i = 0;
+  $requirements = file_check_requirements();
   $output = '<table class="system-status-report">';
   foreach ($requirements as $requirement) {
     if (empty($requirement['#type'])) {
@@ -133,23 +130,20 @@ function file_check_status() {
 }
 
 function dir_list($d) { 
-	foreach(array_diff(scandir($d),array('.','..')) as $f) {
-    if(is_dir($d.'/'.$f)) {
-    	$l[]=$f; 
+  foreach (array_diff(scandir($d), array('.', '..')) as $f) {
+    if (is_dir($d . '/' . $f)) {
+      $l[]=$f; 
     }
-	}  
+  }  
   return $l; 
 } 
 
 function _file_check_file_counter($d=".", $x="") {
-	//$dir_list = dir_list($d);
-	//print_r($dir_list);
-	foreach(array_diff(scandir($d),array('.','..')) as $f) {
-		if(is_file($d.'/'.$f)&&(($x)?ereg($x.'$',$f):1)) {
-      $l[]=$f;
-	  } 
-	}  
-  //dsm($l);
+  foreach (array_diff(scandir($d), array('.', '..')) as $f) {
+    if (is_file($d . '/' . $f) && (($x) ? ereg($x . '$', $f) : 1)) {
+      $l[] = $f;
+    } 
+  }  
   return $l; 
 } 
 
@@ -157,111 +151,94 @@ function _file_check_file_counter($d=".", $x="") {
  * Implementation of hook_form().
  */
 function file_check_form() {
-	$form['submit'] = array(
-  	'#type' => 'submit',
-  	'#value' => t('Check file status'),
-	);
-	
-	return $form;
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Check file status'),
+  );
+
+  return $form;
 }
 
 function file_check_form_submit() {
-	_file_check_load_data();
-	drupal_set_message(t('File check table is rebuilt.'));
+  _file_check_load_data();
+  drupal_set_message(t('File check table is rebuilt.'));
 }
 
 function _files_get_count() {
-	$files_count = db_result(db_query('SELECT count(*) as cnt FROM {files}'));
-	return $files_count;
+  $files_count = db_result(db_query('SELECT count(*) as cnt FROM {files}'));
+  return $files_count;
 }
 
 function _file_check_get_count() {
-	$file_count = db_result(db_query('SELECT count(*) as cnt FROM {file_check} WHERE status = %d', 1));
-	return $file_count;
+  $file_count = db_result(db_query('SELECT count(*) as cnt FROM {file_check} WHERE status = %d', 1));
+  return $file_count;
 }
 
 function file_check_list() { 
-   return theme('file_check_list');
+  return theme('file_check_list');
 }
 
 function _file_check_load_data() {
-	// load the data into file_check table  
+  // load the data into file_check table  
   $output = '';
   $sql = 'SELECT f.fid, f.uid, f.filename, f.filepath, f.filesize, f.status, f.timestamp FROM {files} f';
-  //dsm($sql);
   $result = db_query($sql);
   if (!$result) {
     $output = "No files available.";
   };
 
   while ($fnode = db_fetch_object($result)) {
-  	$data = '';
+    $data = '';
     $status = 0;
     $data['fid'] = $fnode->fid;
     $data['uid'] = $fnode->uid;
     $data['filename'] = $fnode->filename;
     $data['filepath'] = $fnode->filepath;
-    if (file_exists($fnode->filepath)){
-    	$status = 1;
+    if (file_exists($fnode->filepath)) {
+      $status = 1;
     }
     else {
-    	$status = 0;
+      $status = 0;
     }
     $data['status'] = $fnode->status;
     $data['timestamp'] = $fnode->timestamp;
     $timestamp = time();
     db_query('INSERT INTO {file_check} (fcid, data, status, timestamp) VALUES (%d, \'%s\', %d, %d)', $fnode->fid, serialize($data), $status, $timestamp);
   }
-	
-	return $output;
+
+  return $output;
 }
 
 function theme_file_check_list() {
-  //static $refresh_list;
   $output = '';
-  //if (!$refresh_list) {
-  	//dsm("here");
-  	//$output = _file_check_load_data();
-  //}
-  //else {
-    //echo "here";
-    //$refresh_list = TRUE;	 
-	  $headers = array(
-	    array('data' => t('File Id'), 'field' => 'fc.fcid'),
-	    array('data' => t('Data'), 'field' => 'filedata'),
-	    array('data' => t('Status'), 'field' => 'fc.status', 'sort' => 'desc'),
-	    array('data' => t('timestamp'), 'field' => 'fc.timestamp'),
-	  );
-	  
-	  $sql = 'SELECT fc.fcid, fc.data filedata, fc.status, fc.timestamp FROM {file_check} fc'. tablesort_sql($headers);
-	  //dsm($sql);
-	  $result = pager_query($sql, 30);
-	  if (!$result) {
-	    $output = "No files available.";
-	  };
-	  
-	  while ($fnode = db_fetch_object($result)) {
-	  	//dsm($fnode);
-	    $data[$fnode->fcid]['fcid'] = $fnode->fcid;
-	    $filedata = unserialize($fnode->filedata);
-	    //dsm($filedata);
-	    $data[$fnode->fcid]['filedata'] = $filedata['filename'] ;
-	    $data[$fnode->fcid]['status'] = $fnode->status;
-	    $data[$fnode->fcid]['timestamp'] = $fnode->timestamp;
-	  }
-	  //dsm($data);
-	  //add table to output
-	  $output .= theme('table', $headers, $data);
-	  //dsm($output);
-	  //exit;
-	  //add pager to output
-	  $pager = theme('pager', NULL, 30, 0);
-	  if (!empty($pager)) {
-	    $output .= $pager;
-	  }
-	
-	  return $output;
-  //}
+  $headers = array(
+    array('data' => t('File Id'), 'field' => 'fc.fcid'),
+    array('data' => t('Data'), 'field' => 'filedata'),
+    array('data' => t('Status'), 'field' => 'fc.status', 'sort' => 'desc'),
+    array('data' => t('timestamp'), 'field' => 'fc.timestamp'),
+  );
+
+  $sql = 'SELECT fc.fcid, fc.data filedata, fc.status, fc.timestamp FROM {file_check} fc'. tablesort_sql($headers);
+  $result = pager_query($sql, 30);
+  if (!$result) {
+    $output = "No files available.";
+  };
+
+  while ($fnode = db_fetch_object($result)) {
+    $data[$fnode->fcid]['fcid'] = $fnode->fcid;
+    $filedata = unserialize($fnode->filedata);
+    $data[$fnode->fcid]['filedata'] = $filedata['filename'] ;
+    $data[$fnode->fcid]['status'] = ($fnode->status) ? "Available" : "Not available";
+    $data[$fnode->fcid]['timestamp'] = format_date($fnode->timestamp);
+  }
+
+  $output .= theme('table', $headers, $data);
+  $pager = theme('pager', NULL, 30, 0);
+  if (!empty($pager)) {
+    $output .= $pager;
+  }
+
+  return $output;
 }
 
 /**
